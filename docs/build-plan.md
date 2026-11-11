@@ -163,7 +163,7 @@ S2가 45분 이상 늦으면 C1을 기다리지 않고 테스트 변경 감지�
 
 ### S0 셋업 (30분)
 
-**가장 먼저(10분, 사람이 직접):** ① 주최 측 저장소를 클론하고 `git rm -r setup && git commit -m "환경 점검 도구 삭제(구현 시작 전)"`. 환경 점검 스크립트는 제품 코드가 아니고, 구현 중 Claude Code가 참고하지 않게 먼저 지운다. ② 수요일 점검에서 안 된 항목이 있으면 그것부터. ③ 나눠 준 계정으로 로그인한 뒤 터미널에서 `claude -p "ok" --output-format json`과 `--json-schema`를 붙인 호출을 한 번씩 해 본다. sonnet과 haiku를 `--model`로 고를 수 있는지도 본다. 안 되면 S3까지는 FakeBackend로 개발하고, 주최 측에 바로 문의한다. 나눠 준 Codex 계정으로도 로그인해 이 저장소를 읽게 할 수 있는지 본다(안 되면 4장 V1~V3을 Claude 새 세션으로).
+**가장 먼저(10분, 사람이 직접):** ① 주최 측 저장소를 클론하고 `git rm -r setup && git commit -m "환경 점검 도구 삭제(구현 시작 전)"`. 환경 점검 스크립트는 제품 코드가 아니고, 구현 중 Claude Code가 참고하지 않게 먼저 지운다. ② 수요일 점검에서 안 된 항목이 있으면 그것부터. ③ 나눠 준 계정으로 로그인한 뒤 터미널에서 `claude -p "ok" --output-format json`과 `--json-schema`를 붙인 호출을 한 번씩 해 본다. sonnet과 haiku를 `--model`로 고를 수 있는지도 본다. 안 되면 S3까지는 FakeBackend로 개발하고(S2의 실제 호출과 기준표 비교는 C1로 미룬다), 주최 측에 바로 문의한다. 나눠 준 Codex 계정으로도 로그인해 이 저장소를 읽게 할 수 있는지 본다(안 되면 4장 V1~V3을 Claude 새 세션으로).
 
 ```
 pyproject.toml을 만들어 줘. 패키지 xhuman, 콘솔 스크립트 xh = xhuman.cli:main,
@@ -220,7 +220,8 @@ FakeBackend 응답은 contracts.md 2.3 형식으로 tests/fixtures/llm/<task>/de
 ```
 quiz: 설계서 6.1 우선순위로 대상 선정(테스트 변경 질문은 한 번에 1개까지: contracts.md 1.2 규칙 7), ingest 끝에 상위 6개 단위 질문을 미리 생성(pregenerate).
 xh check: 3개 질문(질문 앞에 [question_id] 출력, ID는 contracts.md 1.1 규칙으로 결정적) → 답 입력(--answers 파일이면 contracts.md 4장 표대로 건너뛰기·상환 자동 진행) → grade 한 번 호출 → 판정 저장(판정은 matched만으로 계산, 누락·중복 포인트는 미충족: contracts.md 1.2 규칙 1)
-→ partial/unknown이면 repay → 재확인 → contracts.md 1.2 규칙 2로 판정 → 점수 전후 출력.
+→ partial/unknown이면 repay → 재확인 → contracts.md 1.2 규칙 2로 판정 → 점수 전후 출력
+→ 마지막 줄 "이번에 질문하지 않은 함수의 결정: ..."(contracts.md 4장. 테스트는 test-cases.md의 T3-x, S2 표에 들어 있다).
 coverage: 1.2 규칙 5~6. xh status: 커버리지 두 줄 + 이해 부채 상위 5개 + 열린 테스트 변경.
 test-cases.md의 S3 시나리오를 먼저 테스트로 쓰고 FakeBackend로 통과시켜 줘.
 ```
@@ -236,6 +237,12 @@ XHUMAN_BACKEND=claude로 시연 세션 전 과정을 실제로 돌려 줘. 호�
 
 C1에서 함께 본다: T0-6 통과. 검사 대상은 로더가 돌려준 지시문 템플릿(`complete_json`의 `prompt` 인자)뿐이고, 세션·코드를 담은 `stdin_text`나 둘을 합친 최종 문자열은 검사하지 않는다. 실패하면 로더가 "지시문" 블록 밖(입력 형식·출력 예)을 붙인 것이니 로더만 고친다. 테스트의 금지 단어를 빼서 통과시키지 않는다.
 
+**C1에서 `tests/fixtures/demo_answers.json`을 만든다(사람이 직접, 약 15분. 11/11 추가).** S5의 리플레이 통과와 V3는 이 파일과 채점·상환·재확인 캐시가 있어야 돈다. S6으로 미루지 않는다(S6에서는 대사만 고친다).
+
+1. 실제 백엔드로 `xh ingest`(추출·질문 6개가 캐시에 들어간다). 그다음 내용이 `{}`인 파일로 `xh check --answers`를 돌린다. 세 질문이 모두 `건너뜀`으로 나오고 기록은 남지 않는다. 출력된 `[q_...]` ID와 질문을 본다.
+2. 파일에 Q1·Q2·Q3 답과 `<Q2 ID>-r`(임시 문장)을 넣고 다시 돌려 재확인 질문을 본다(재확인 질문은 `-r` 키가 있어야 나온다). `-r`을 실제 재확인 답으로 바꾼다. 답은 [demo-script.md](demo-script.md) 5장 견본처럼 Q2는 일부만 맞는 답, Q3은 "모르겠어요".
+3. `xhuman.db`만 지우고 `xh ingest`(캐시 적중) → 최종 파일로 `xh check --answers`를 실제 백엔드로 한 번 더 돌린다. **이 실행의 응답이 시연 캐시다.** Q2가 partial → 재확인 understood → 11% / 22%인지 확인한다. 아니면 답 문장을 고쳐 3번만 반복한다(2회까지. 그래도 안 되면 나온 판정대로 대본 숫자를 바꾼다. 결과를 대사에 맞추지 않는다).
+
 그다음 **V2** 검증을 맡긴다(아래 4장, 실제 호출은 Claude 쪽에서만). 여기서 계획(16:15)보다 1시간 이상 늦으면 컷 라인 1~2 적용.
 
 ### S4 리포트·만료 (1시간, 순서 고정. 꾸미기는 버퍼에서만)
@@ -246,7 +253,7 @@ C1에서 함께 본다: T0-6 통과. 검사 대상은 로더가 돌려준 지시
 xhuman/report.py: report-wireframe.md 5장 '최소 버전'대로 정적 HTML 1장(외부 리소스·JS 없음, CSS 몇 줄).
 상단에 커버리지 두 숫자와 결정 주체별 개수. 그 아래 단위 표(파일·함수·색 칸+상태 글자·위험 배지·AI 비율).
 그 아래 단위마다 연결 결정 목록(주체 배지, 요약, 이유, ✓ 인용)을 모두 펼쳐서 출력.
-xh report가 ~/.xhuman/report/index.html을 쓰고 경로를 출력. 시연 세션으로 생성해 브라우저에서 확인.
+xh report가 $XHUMAN_HOME/report/index.html(기본 ~/.xhuman/report/index.html)을 쓰고 경로를 출력. 시연 세션으로 생성해 브라우저에서 확인.
 ```
 
 **② 만료 (30분)**

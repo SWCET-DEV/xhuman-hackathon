@@ -39,6 +39,7 @@ tests/fixtures/    시연 세션 JSONL, 샘플 프로젝트, 가짜 백엔드 �
 - 해시, 작성 출처, 위험 태그, 결정 주체, 점수, 커버리지는 프로그램이 계산한다. AI는 추출, 질문 생성, 핵심 포인트 충족 판정, 상환 설명만 한다.
 - 모든 파이프라인 단계는 멱등이어야 한다. 같은 입력으로 두 번 돌려도 DB 결과가 같아야 한다.
 - 사용자에게 보이는 문구는 한국어.
+- Windows에서도 돌아야 한다: 파일 읽기·쓰기와 `subprocess` 입출력은 `encoding="utf-8"`을 명시하고, 표준 출력도 UTF-8로 맞춘다(한글·✓ 출력). DB에 넣는 경로와 `unit_id`의 경로는 `/` 구분자로 통일한다. 문서의 셸 명령은 Git Bash 기준이다.
 
 ## 바꾸면 안 되는 것
 
@@ -48,7 +49,7 @@ tests/fixtures/    시연 세션 JSONL, 샘플 프로젝트, 가짜 백엔드 �
 ## 작업 방식
 
 - 한 번에 모듈 하나. 완료 기준은 "해당 테스트 통과"다. [docs/test-cases.md](docs/test-cases.md)의 시나리오로 테스트를 먼저 쓴다.
-- 개발 중 AI 호출은 `FakeBackend`로 한다. 실제 `claude -p`는 통합 체크포인트에서만 쓴다.
+- 개발 중 AI 호출은 `FakeBackend`로 한다. 실제 `claude -p`는 build-plan.md가 정한 곳에서만 쓴다: S2의 연결 확인 1회와 시연 세션 실제 추출 1회, 통합 체크포인트(C1) 이후. pytest는 실제 호출을 하지 않는다.
 - 실측 사실과 함정은 [docs/verified-facts.md](docs/verified-facts.md)를 먼저 본다. 세션 JSONL 형식을 추측하지 않는다.
 - **사전 작성 코드는 반입하지 않는다.** 모든 코드는 당일 문서만 보고 새로 쓴다. 파싱·인용 검증·주체 분류의 세부 규칙은 [docs/contracts.md](docs/contracts.md) 5장에 있다. 반입 목록은 [docs/carry-in.md](docs/carry-in.md).
 - 단계가 끝나면 커밋한다. 커밋 메시지는 한국어 한 줄 + 필요하면 본문.
