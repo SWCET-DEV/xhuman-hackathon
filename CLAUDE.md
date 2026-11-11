@@ -15,7 +15,7 @@ Claude Code 개발 세션 기록(JSONL)에서 "왜"(결정, 이유, 버린 대�
 
 | 구분 | 기능 |
 |---|---|
-| 필수 | 세션 수집, 코드 색인·AST 해시, 작성 출처(완전 일치만), 위험 태그 3종, 결정 추출·인용 검증·주체 분류(보류 후 반영 포함)·연결, 테스트 변경 감지(`assertion_changed`만), 질문 생성(미리 생성)·채점·상환·재확인, 커버리지, 만료, `xh why/status/check/report`, 정적 HTML 리포트, 리플레이 모드 |
+| 필수 | 세션 수집, 코드 색인·AST 해시, 작성 출처(완전 일치만), 위험 태그 3종, 결정 추출·인용 검증·주체 분류(보류 후 반영 포함)·연결, 테스트 변경 감지(`assertion_changed`만), 질문 생성(미리 생성)·채점·상환·재확인, 커버리지, 만료, `xh ingest/scan/why/status/check/report`, 정적 HTML 리포트, 리플레이 모드 |
 | 선택 (16시에 일정이 앞설 때만) | OpenAI 호환 백엔드(`grade`에만 연결) |
 | 제외 | 인수인계 내보내기(`xh export`, 다음 단계), 리뷰 리허설, SessionEnd 훅, 사내 OSS 실제 연결, 웹 퀴즈, `ai_then_human` 유사도 분류, 위험 규칙 TOML, `test_removed/skipped/added`, 증분 읽기(`last_offset`) |
 
