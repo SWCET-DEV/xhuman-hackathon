@@ -72,6 +72,7 @@
 ## 6. 전달 방법 (11/11 22시까지, GitHub)
 
 - **지금 저장소를 그대로 올리지 않는다.** 이 저장소에는 `prototype/`, `slides/`, `carry-in/`과 그 이력이 있다.
-- 새 빈 저장소(또는 주최 측이 준 저장소)에 `xhuman-docs.zip`과 `xhuman-demo-data.zip`을 같은 폴더에 풀어서 올린다. 두 zip은 경로가 겹치지 않는다(문서 zip: `CLAUDE.md`, `README.md`, `docs/`, 데이터 zip: `tests/fixtures/`).
+- 주최 측이 준 저장소(또는 새 빈 저장소)에 `CLAUDE.md`, `README.md`, `docs/`, `tests/fixtures/`만 복사해 올린다. zip은 만들지 않는다(11/11).
 - 올리기 전 확인: `find . -name "*.py" -not -path "./tests/fixtures/demo-payment/*"`가 비어 있음, `prototype` 폴더 없음, `cd tests/fixtures/demo-payment && python3 -m pytest -q`가 43개 통과.
 - `slides/`(HTML 장표)는 넣지 않는다. 미리 만들어도 되지만(질문 3) 해커톤 PC에서는 쓰지 않고, 목요일 22시 이후 집에서 작업한다.
+- **11/11 전달 완료:** https://github.com/SWCET-DEV/xhuman-hackathon (`main`, 커밋 43e9446, 파일 27개). 두 zip 내용만 커밋 1개로 올렸고, 샘플 테스트 43개 통과, `.py`는 샘플 프로젝트에만 있음을 확인. 목요일에는 이 저장소를 클론해서 시작한다.
