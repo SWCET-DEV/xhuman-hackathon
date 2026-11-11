@@ -78,7 +78,7 @@ python3 prototype/decision_extract/extract_decisions.py tests/fixtures/demo_sess
 | 포괄 수락 | 1 | 4 (1턴 "좋아 그렇게 해"에 6개가 묶였고 4개가 최종 코드에 남음) | 충족 |
 | AI 단독 | 2 | 7 | 충족 |
 | 사람 지시 | 1 | 3 (멱등키, 최대 2회, 4xx→PaymentDeclined) | 충족 |
-| 근거 인용 | 제외 0, 확신 낮음 ≤2 | 17개 모두 원문 일치, 제외 0, 확신 낮음 0 | 충족 |
+| 근거 인용 | 제외 0, 확신 낮음 ≤2 | 결정 17개의 인용 31개 모두 원문 일치, 제외 0, 확신 낮음 0 | 충족 |
 | 테스트 `Edit` 중 assert 변경 | 1 | 5턴 6회·6턴 4회 `Edit`. 감지 건수는 목요일 구현으로 센다 | 충족(형태 확인) |
 | `payment`·`db_write` 태그 | 각 1 | `charge_with_retry`(client.charge), `record_payment`(sqlite execute) | 미검증(프로토타입에 태그 기능 없음) |
 
