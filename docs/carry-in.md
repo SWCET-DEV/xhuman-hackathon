@@ -78,4 +78,5 @@
 - 주최 측이 준 저장소(또는 새 빈 저장소)에 `CLAUDE.md`, `README.md`, `docs/`, `tests/fixtures/`만 복사해 올린다. zip은 만들지 않는다(11/11).
 - 올리기 전 확인: `find . -name "*.py" -not -path "./tests/fixtures/demo-payment/*"`에 `setup/check_env.py`만 나옴, `prototype` 폴더 없음, `cd tests/fixtures/demo-payment && python3 -m pytest -q`가 43개 통과.
 - `slides/`(HTML 장표)는 넣지 않는다. 미리 만들어도 되지만(질문 3) 해커톤 PC에서는 쓰지 않고, 목요일 22시 이후 집에서 작업한다.
-- **11/11 전달 완료:** https://github.com/SWCET-DEV/xhuman-hackathon (`main`, 커밋 43e9446, 파일 27개). 두 zip 내용만 커밋 1개로 올렸고, 샘플 테스트 43개 통과, `.py`는 샘플 프로젝트에만 있음을 확인. 목요일에는 이 저장소를 클론해서 시작한다.
+- **11/11 전달 완료:** https://github.com/SWCET-DEV/xhuman-hackathon (`main`, 커밋 43e9446, 파일 27개). 두 zip 내용만 커밋 1개로 올렸고, 샘플 테스트 43개 통과, `.py`는 샘플 프로젝트에만 있음을 확인. 
+- **11/11 21시 변경: 주최 측 저장소** https://github.com/samsung-sds-hackathon/xhuman (`main`)이 생겨, 위 저장소의 내용을 그대로 이 저장소로 옮겼다(22시 마감). **목요일에는 주최 측 저장소를 클론해서 시작한다.** SWCET-DEV/xhuman-hackathon은 이전 사본이고 더 고치지 않는다.

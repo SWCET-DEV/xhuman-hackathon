@@ -6,7 +6,7 @@
 
 ## 가져갈 것
 
-- 이 저장소 주소: `https://github.com/SWCET-DEV/xhuman-hackathon`
+- 이 저장소 주소: `https://github.com/samsung-sds-hackathon/xhuman` (11/11 21시부터 주최 측 저장소. 이전 주소 SWCET-DEV/xhuman-hackathon은 쓰지 않는다)
 - 주최 측이 나눠 줄 Claude 계정, Codex 계정 정보
 - 결과를 적을 메모(휴대폰 메모도 됨)
 
@@ -43,8 +43,8 @@
 ## 2. 저장소 받기 (5분)
 
 ```bash
-git clone https://github.com/SWCET-DEV/xhuman-hackathon.git
-cd xhuman-hackathon
+git clone https://github.com/samsung-sds-hackathon/xhuman.git
+cd xhuman
 ```
 
 - [ ] 폴더에 `CLAUDE.md`, `README.md`, `docs/`, `tests/fixtures/`, `setup/`이 있다.
@@ -106,7 +106,7 @@ Claude 4가지:
 
 - [ ] 푸시 인증: `git push --dry-run` (빈 커밋을 만들지 않는다)
 - [ ] 브라우저에서 로컬 HTML 파일이 열리는지(아무 `.html`이나 더블클릭. 리포트가 `file://`로 열린다)
-- [ ] VSCode에서 `xhuman-hackathon` 폴더 열기, 터미널 2개(개발용, `xh` 실행용)
+- [ ] VSCode에서 `xhuman` 폴더 열기, 터미널 2개(개발용, `xh` 실행용)
 
 ## 5. 시간이 남으면
 
