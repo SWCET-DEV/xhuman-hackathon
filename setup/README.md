@@ -10,6 +10,22 @@
 - 주최 측이 나눠 줄 Claude 계정, Codex 계정 정보
 - 결과를 적을 메모(휴대폰 메모도 됨)
 
+## 사전에 설치할 것 (없으면 17:00~18:00에 설치)
+
+| 도구 | 확인 명령 | 기준 | 비고 |
+|---|---|---|---|
+| Claude Code | `claude --version` | 녹화본 2.1.322, 이상이면 된다 | 설치 방식(네이티브, npm)에 따라 Node.js가 필요할 수 있다. 어느 쪽인지 적는다 |
+| Python | `python --version` 또는 `py --version` | 3.11 이상 | Windows는 `py` 런처를 쓸 수도 있다 |
+| pytest | `python -m pytest --version` | 설치만 하면 된다(녹화본 9.2.0) | `python -m pip install pytest` |
+| git | `git --version` | 아무 최신 버전 | Windows는 Git Bash가 같이 깔린다. 두 번째 명령(JSON 스키마)은 Git Bash에서 돌린다 |
+| VSCode | 실행 | 아무 최신 버전 | 터미널 2개를 쓴다 |
+| 브라우저 | 실행 | 아무 최신 버전 | 리포트를 `file://`로 연다 |
+| Codex | 앱 또는 CLI 로그인 | 주최 측 계정 | 교차 리뷰용. 필수는 아님 |
+
+**설치하지 않는 것:** 프로젝트 의존성(`pip install -e .[dev]`)은 목요일 S0에서 한다. 지금 깔 필요 없다. 라이브러리는 표준 라이브러리만 쓴다.
+
+**추가 확인이 필요한 것:** Claude Code를 어떤 방식으로 설치하는지는 주최 측이 준 PC에 따라 다르다. 설치 방식이 확인되지 않으면 `where claude`(Windows) 결과와 함께 적어 온다.
+
 ## 0. 도착하면 먼저 물어볼 것 (2분)
 
 1. "환경 점검용 스크립트(`setup/check_env.py`)를 한 번 돌려도 되나요? 설치·수정 없이 확인만 합니다."
