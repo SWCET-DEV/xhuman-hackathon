@@ -35,6 +35,7 @@
 | 조건부 (질문 4) | `tests/fixtures/demo_session.jsonl` | 화요일 녹화본. 대화와 함께 AI가 쓴 코드 조각이 들어 있다 |
 | 조건부 (질문 4) | `tests/fixtures/demo-payment/` | 세션에서 AI가 만든 샘플 프로젝트(Python 약 300줄과 테스트). XHuman이 분석하는 대상이지 XHuman 코드가 아님 |
 | X | 사전에 받은 AI 응답 JSON, 프로토타입 분석 결과(`expected_classify.json` 등) | 사실상 프로토타입 산출물이라 반입하지 않기로 함(11/10). FakeBackend 응답은 목요일에 손으로 쓰고, 리플레이 캐시는 목요일 C1에서 새로 만든다. 시연 답변 문장은 [demo-script.md](demo-script.md) 5장(md)에 있다 |
+| 조건부 (주최 측에 물어봄) | `setup/check_env.py` | 환경 점검 스크립트(11/11 추가). 설치·수정 없이 확인만 한다. XHuman 코드가 아니며 목요일 구현 전에 지운다. 주최 측이 안 된다고 하면 돌리지 않고 지운다 |
 | X | `prototype/**` | 반입 불가 확정 |
 | X | 사전 검증 때 생긴 코드, `~/.xhuman/` 캐시 DB | 반입 폴더에 넣지 않음 |
 
@@ -75,6 +76,6 @@
 
 - **지금 저장소를 그대로 올리지 않는다.** 이 저장소에는 `prototype/`, `slides/`, `carry-in/`과 그 이력이 있다.
 - 주최 측이 준 저장소(또는 새 빈 저장소)에 `CLAUDE.md`, `README.md`, `docs/`, `tests/fixtures/`만 복사해 올린다. zip은 만들지 않는다(11/11).
-- 올리기 전 확인: `find . -name "*.py" -not -path "./tests/fixtures/demo-payment/*"`가 비어 있음, `prototype` 폴더 없음, `cd tests/fixtures/demo-payment && python3 -m pytest -q`가 43개 통과.
+- 올리기 전 확인: `find . -name "*.py" -not -path "./tests/fixtures/demo-payment/*"`에 `setup/check_env.py`만 나옴, `prototype` 폴더 없음, `cd tests/fixtures/demo-payment && python3 -m pytest -q`가 43개 통과.
 - `slides/`(HTML 장표)는 넣지 않는다. 미리 만들어도 되지만(질문 3) 해커톤 PC에서는 쓰지 않고, 목요일 22시 이후 집에서 작업한다.
 - **11/11 전달 완료:** https://github.com/SWCET-DEV/xhuman-hackathon (`main`, 커밋 43e9446, 파일 27개). 두 zip 내용만 커밋 1개로 올렸고, 샘플 테스트 43개 통과, `.py`는 샘플 프로젝트에만 있음을 확인. 목요일에는 이 저장소를 클론해서 시작한다.
