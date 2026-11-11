@@ -116,13 +116,13 @@
 | 08:00~08:30 | S0 셋업 | 전달 저장소 클론, `pytest` 녹색(LLM 캐시·리플레이 T0-2~T0-4, 프롬프트 로더 T0-6) |
 | 08:30~11:00 | S1 수집·색인·출처·위험 | 시연 세션 → DB에 발화·편집·단위·AI 비율·위험 태그 |
 | 11:00~13:15 | S2 결정·테스트 변경·why | 주체 분포가 session-script.md 3장 기준표를 충족, `xh why`가 근거 인용 출력 |
-| 13:15~13:45 | 점심 | |
+| 13:15~13:45 | 점심 | **V1** 검증을 Codex에 맡겨 두고 먹는다(4장) |
 | 13:45~16:15 | S3 질문·채점·상환·커버리지 | 가짜 백엔드로 `xh check` 전 과정 |
 | 16:15~16:45 | **C1 통합 체크포인트** | 실제 AI로 전 과정 1회, 캐시 채움. 늦으면 컷 라인 적용 |
 | 16:45~17:45 | S4 리포트·만료 | 16:45~17:15 최소 리포트(필수) → 17:15~17:45 만료. 브라우저에서 지도·노랑 변화 확인 |
 | 17:45~18:15 | 저녁 | |
 | 18:15~19:45 | S5 리플레이·시연 통과 | 리플레이 모드로 시연 대본 2회 통과 |
-| 19:45~20:30 | 버퍼 | 밀린 단계를 흡수한다. 밀린 게 없으면 리포트 꾸미기(S4 ③) |
+| 19:45~20:30 | 버퍼 | **V3** 검증(4장)을 먼저 맡기고, 밀린 단계를 흡수한다. 밀린 게 없으면 리포트 꾸미기(S4 ③) |
 | **20:30** | **기능 동결**, 태그 `demo-v1` | 여기서 시연이 가능해야 한다. 덜 된 기능은 컷하고 금요일 복구 목록으로 넘긴다 |
 | 20:30~22:00 | S6 리허설·캡처 | 3분 안에 3회 연속 통과, 장면별 캡처본 확보(발표자료에 씀) |
 | 22:00~ (집) | 발표자료 | [slides-draft.md](slides-draft.md)의 `[[ ]]`와 캡처만 채움. 1시간 30분 이내 |
@@ -163,12 +163,13 @@ S2가 45분 이상 늦으면 C1을 기다리지 않고 테스트 변경 감지�
 
 ### S0 셋업 (30분)
 
-**가장 먼저(5분, 사람이 직접):** 나눠 준 계정으로 로그인한 뒤 터미널에서 `claude -p "ok" --output-format json`과 `--json-schema`를 붙인 호출을 한 번씩 해 본다. sonnet과 haiku를 `--model`로 고를 수 있는지도 본다. 안 되면 S3까지는 FakeBackend로 개발하고, 주최 측에 바로 문의한다.
+**가장 먼저(5분, 사람이 직접):** 나눠 준 계정으로 로그인한 뒤 터미널에서 `claude -p "ok" --output-format json`과 `--json-schema`를 붙인 호출을 한 번씩 해 본다. sonnet과 haiku를 `--model`로 고를 수 있는지도 본다. 안 되면 S3까지는 FakeBackend로 개발하고, 주최 측에 바로 문의한다. 나눠 준 Codex 계정으로도 로그인해 이 저장소를 읽게 할 수 있는지 본다(안 되면 4장 V1~V3을 Claude 새 세션으로).
 
 ```
 pyproject.toml을 만들어 줘. 패키지 xhuman, 콘솔 스크립트 xh = xhuman.cli:main,
 requires-python >= 3.11, 런타임 의존성 없음, dev 추가 의존성 pytest.
 CLAUDE.md의 디렉터리 구조대로 빈 모듈을 만들어 줘. 기존 코드는 없으니 모두 새로 쓴다.
+xhuman/__main__.py를 두어 python -m xhuman <명령>으로도 실행되게 해 줘(검증용 worktree는 설치 없이 실행한다).
 xhuman/llm/base.py에 contracts.md 2.1의 인터페이스, 캐시(별도 파일 llm_cache.db, 키에 backend 포함), 리플레이 모드를,
 xhuman/llm/fake.py에 FakeBackend를 만들어 줘. 테스트는 XHUMAN_HOME을 임시 폴더로 쓴다.
 docs/prompts/*.md를 xhuman/prompts/로 그대로 복사하고, 각 파일의 "지시문" 코드 블록 안만 꺼내
@@ -233,7 +234,7 @@ XHUMAN_BACKEND=claude로 시연 세션 전 과정을 실제로 돌려 줘. 호�
 
 C1에서 함께 본다: T0-6 통과. 검사 대상은 로더가 돌려준 지시문 템플릿(`complete_json`의 `prompt` 인자)뿐이고, 세션·코드를 담은 `stdin_text`나 둘을 합친 최종 문자열은 검사하지 않는다. 실패하면 로더가 "지시문" 블록 밖(입력 형식·출력 예)을 붙인 것이니 로더만 고친다. 테스트의 금지 단어를 빼서 통과시키지 않는다.
 
-그다음 Codex에 읽기 전용 리뷰를 맡긴다(아래 4장). 여기서 계획(16:15)보다 1시간 이상 늦으면 컷 라인 1~2 적용.
+그다음 **V2** 검증을 맡긴다(아래 4장, 실제 호출은 Claude 쪽에서만). 여기서 계획(16:15)보다 1시간 이상 늦으면 컷 라인 1~2 적용.
 
 ### S4 리포트·만료 (1시간, 순서 고정. 꾸미기는 버퍼에서만)
 
@@ -268,6 +269,7 @@ XHUMAN_REPLAY=1에서 demo-script.md의 명령을 순서대로 실행해 줘. �
 scripts/demo_reset.sh를 만들어 줘: ① git checkout -- tests/fixtures/demo-payment(장면 5에서 고친 줄 복구)
 ② $XHUMAN_HOME/xhuman.db만 삭제(llm_cache.db는 절대 지우지 않는다)
 ③ XHUMAN_REPLAY=1로 xh ingest(추출·질문 생성을 실제로 다시 부르지 않고 캐시에서 읽는다. 캐시 누락이면 실패해야 정상).
+스크립트 안의 xh는 ${XH:-xh}로 불러, 검증 worktree에서 XH="python -m xhuman"으로 바꿀 수 있게 해 줘.
 사전 측정 답변은 넣지 않는다(커버리지 0%에서 시작).
 ```
 
@@ -288,10 +290,56 @@ scripts/demo_reset.sh를 만들어 줘: ① git checkout -- tests/fixtures/demo-
 | `claude -p` 실패·지연 | 리플레이 모드로 계속 개발. 원인 조사는 동결 이후 |
 | Claude Code 한도·장애 | Codex로 같은 단계 프롬프트를 이어서 진행 |
 
-## 4. Codex 교차 리뷰 프롬프트 (C1 직전, 20:30 직전)
+## 4. 검증 세션 (V1·V2·V3, 11/11 발표자 채택)
+
+Claude는 구현과 단위 테스트, Codex(별도 세션)는 **명세 기준 독립 검증만** 한다. 검증은 원래 비어 있는 시간에 넣어 일정을 늘리지 않는다.
+
+| 회차 | 시점 | 기준 커밋 | 볼 것 | 추가 시간 |
+|---|---|---|---|---|
+| V1 | 13:15 점심 중 | S2 완료 커밋 | 파싱, 인용 검증, 주체 분류, `test_watch` 6건, ingest 두 번 멱등. 코드 읽기와 `pytest -q`만 | 0분 |
+| V2 | 16:15 C1 | S3 완료 커밋 | 계약과 다른 동작, 질문→채점→상환→재확인, 커버리지, 캐시 키의 backend 구분(가짜 응답이 섞이지 않았는지) | 0분(C1 안) |
+| V3 | 19:45 버퍼 시작 | S5 완료 커밋 | 별도 `XHUMAN_HOME`에서 `demo_reset.sh` → 대본 → 만료 → `demo_reset.sh` → 대본, 리플레이 중 외부 호출 0회 | 버퍼에서 |
+
+**운영 규칙**
+
+- **Codex는 고치지 않고 보고만 한다.** 보고는 차단·높음만 5개 이내, 항목마다 위치(파일:줄) / 재현 명령 / 기대 결과 / 실제 결과. 수정은 Claude가 하고, 같은 재현 명령으로 Codex가 다시 확인한다.
+- **수정은 회당 20분까지.** 넘으면 고치지 않고 1.3 컷 라인으로 간다. 중간·낮음은 금요일 복구 목록에 적기만 한다.
+- **폴더와 데이터를 나눈다.** worktree에서는 `pip install`을 하지 않는다(설치하면 Claude 쪽 `xh` 명령이 worktree 코드를 가리키게 된다). 대신 worktree 폴더에서 `python -m pytest -q`, `python -m xhuman <명령>`으로 실행한다. Codex는 단계 커밋으로 만든 별도 worktree에서 돌린다: `git worktree add ../xh-verify <커밋>`(다음 회차는 `git -C ../xh-verify checkout <커밋>`). Codex가 `xh`를 실행할 때는 `XHUMAN_HOME`을 별도 임시 폴더로 두고 `XHUMAN_REPLAY=1` 또는 `XHUMAN_BACKEND=fake`로만 실행한다. **Codex는 실제 `claude`를 부르지 않고, Claude 쪽 `~/.xhuman`(캐시 포함)을 건드리지 않는다.**
+- **Codex 계정이 안 되면(S0 첫 5분에 확인):** V1~V3을 Claude Code 새 세션(이 대화의 맥락 없이)에 같은 프롬프트로 맡긴다. 독립성은 떨어지지만 구현 맥락이 섞이지 않는다. Codex를 Claude 장애 대체용으로 남겨 두기 위해 검증으로 한도를 다 쓰지 않는다.
+
+**공통 머리말(세 회차 모두 앞에 붙인다)**
 
 ```
-이 저장소의 xhuman/ 패키지를 읽기만 하고 수정하지 마. CLAUDE.md와 docs/contracts.md 기준으로
-(1) 계약과 다른 동작, (2) 멱등성이 깨지는 곳, (3) 시연 대본(docs/demo-script.md)을 실패시킬 수 있는
-버그만 심각도 순으로 10개 이내로 알려 줘. 스타일 지적은 빼.
+너는 검증자다. 파일을 수정하지 말고 보고만 한다. 기준 문서는 CLAUDE.md → docs/contracts.md →
+docs/build-plan.md의 해당 단계 → docs/test-cases.md → docs/demo-script.md 순서다(기획서는 기준이 아니다).
+pip install은 하지 않는다. 이 폴더(worktree)에서 python -m pytest -q, python -m xhuman <명령>으로 실행하고,
+XHUMAN_HOME을 새 임시 폴더로 두고 XHUMAN_REPLAY=1 또는 XHUMAN_BACKEND=fake로만 실행한다.
+실제 claude 명령은 부르지 않는다. 보고는 차단·높음만 5개 이내, 항목마다 위치(파일:줄), 재현 명령,
+기대 결과(근거 문서와 절), 실제 결과를 적는다. 스타일 지적과 추측은 빼고, 확인 못 한 것은 "확인 못 함"이라고 쓴다.
+```
+
+**V1 (S2 뒤)**
+
+```
+xhuman/의 ingest·codeindex·provenance·risk·decisions·test_watch를 contracts.md 1·3·5장과 대조한다.
+pytest -q를 돌리고, tests/fixtures/demo_session.jsonl로 ingest를 두 번 실행해 레코드 수가 같은지,
+test_events가 6건이고 첫 이벤트 단위가 test_gives_up_after_exactly_two_attempts_on_transient_failure인지,
+인용 검증·주체 분류가 contracts.md 5.3·5.5 규칙대로인지 본다(결정 추출 결과는 fake 응답 기준).
+```
+
+**V2 (C1)**
+
+```
+xhuman/ 전체를 contracts.md와 대조해 (1) 계약과 다른 동작, (2) 멱등성이 깨지는 곳,
+(3) 시연 대본을 실패시킬 버그를 찾는다. 특히 llm 캐시 키에 backend가 들어가는지, llm_cache.db가 xhuman.db와 분리됐는지,
+question_id가 결정적인지, --answers 규칙(contracts.md 4장 표), 판정 계산(1.2 규칙 1·2), 커버리지(규칙 5·6)를 본다.
+```
+
+**V3 (S5 뒤)**
+
+```
+Claude가 C1에서 채운 llm_cache.db를 새 XHUMAN_HOME에 복사하고 XH="python -m xhuman"으로 둔 뒤(명령의 xh도 모두 이것으로),
+네트워크를 쓰지 않는 상태로 scripts/demo_reset.sh → demo-script.md 2장 명령 순서(--answers 사용) → 함수 한 줄 수정 → xh scan → xh report
+→ scripts/demo_reset.sh → 같은 순서를 한 번 더 실행한다. 두 번의 화면 숫자(0%/0%, 11%/22%)와 질문 ID가 같은지,
+리플레이 캐시 누락이나 외부 호출이 없는지, 두 번째 초기화 뒤 샘플 코드가 원래대로인지 본다.
 ```
