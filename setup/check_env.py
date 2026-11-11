@@ -3,11 +3,14 @@
 쓰는 법:  python setup/check_env.py            (전달 저장소를 클론한 폴더에서 실행)
           python setup/check_env.py --no-claude  (Claude 호출 없이 도구만 점검)
 
-하는 일: 확인만 한다. 아무것도 설치하지 않고, 파일을 만들거나 고치지 않는다.
-        Claude 호출은 3번(짧은 질문)만 한다. API 키 방식 계정이면 합쳐서 1달러 안팎이 청구될 수 있다.
+하는 일: 확인만 한다. 아무것도 설치하지 않고, 저장소 폴더의 파일을 만들거나 고치지 않는다.
+        부수 효과(숨기지 않음): 샘플 테스트 중 일부가 시스템 임시 폴더에 임시 DB를 만들었다 지운다(pytest tmp_path).
+        Claude 호출은 3번(짧은 질문)이고, 모두 도구 없음·세션 저장 안 함·사용자 설정 안 읽음으로 부른다.
+        API 키 방식 계정이면 합쳐서 1달러 안팎이 청구될 수 있다. 호출 없이 보려면 --no-claude.
 못 하는 일: 로그인, 사용량 한도 확인, 화면 연결. 이것은 사람이 직접 한다(맨 아래에 다시 알려 준다).
 
 이 파일은 XHuman 제품 코드가 아니고 환경 점검 도구다. 목요일 구현을 시작하기 전에 setup/ 폴더를 지우고 커밋한다.
+구현 중에 이 파일의 claude 호출·JSON 처리 코드를 참고하거나 옮기지 않는다(xhuman/llm은 docs만 보고 새로 쓴다).
 표준 라이브러리만 쓴다.
 """
 
@@ -81,9 +84,11 @@ def check_git_and_repo():
     for root, dirs, files in os.walk(here):
         dirs[:] = [d for d in dirs if d not in (".git", ".venv", "__pycache__", ".pytest_cache")]
         rel = os.path.relpath(root, here).replace("\\", "/")
+        in_sample = rel == "tests/fixtures/demo-payment" or rel.startswith("tests/fixtures/demo-payment/")
         for f in files:
-            if f.endswith(".py") and not rel.startswith("tests/fixtures/demo-payment") and f != os.path.basename(__file__):
-                stray.append(f"{rel}/{f}")
+            path = f if rel == "." else f"{rel}/{f}"
+            if f.endswith(".py") and not in_sample and path != "setup/check_env.py":
+                stray.append(path)
     has_proto = os.path.isdir(os.path.join(here, "prototype"))
     if stray or has_proto:
         record("사전 작성 코드 없음", "FAIL", ("prototype 폴더 있음. " if has_proto else "") + "샘플 밖 .py: " + ", ".join(stray[:5]))
@@ -108,10 +113,10 @@ def check_git_and_repo():
 
 
 def claude_call(exe, model, with_schema):
-    args = [exe, "-p", "ok라고만 답해", "--output-format", "json"]
+    args = [exe, "-p", "ok라고만 답해", "--output-format", "json",
+            "--tools", "", "--no-session-persistence", "--setting-sources", ""]
     if with_schema:
-        args += ["--model", model, "--tools", "", "--no-session-persistence", "--setting-sources", "",
-                 "--json-schema", json.dumps(SCHEMA)]
+        args += ["--model", model, "--json-schema", json.dumps(SCHEMA)]
     code, out, err, sec = run(args, timeout=150)
     try:
         data = json.loads(out)

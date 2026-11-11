@@ -13,7 +13,7 @@
 - **반입(11/11 주최 측 확인): 문서(`CLAUDE.md`, `README.md`, `docs/`)와 시연 데이터(`tests/fixtures/`의 대화 기록·샘플 프로젝트)를 모두 가져간다.** GitHub 저장소로 전달했다([carry-in.md](carry-in.md) 6장). 목요일은 그 저장소를 클론해서 시작한다. 프로토타입 코드와 사전 AI 응답·분석 결과는 가져가지 않는다. 재구현 규칙은 [contracts.md](contracts.md) 5장.
 - 일정: 목 08~22시 기본 계획(20:30 동결), 금 08~13시는 버퍼(10:30 최종 동결). 발표자료는 미리 만들어도 된다(11/11 주최 측). 장표는 해커톤 PC로 가져가지 않고 목요일 22시 이후 집에서 [slides-draft.md](slides-draft.md)의 자리만 채운다.
 - AI 엔진: 전부 Claude(`claude -p`). 목요일에 OpenAI 크레딧이 실제로 있으면 C1 뒤 OpenAI 호환 백엔드를 `grade`에만 붙여 보고, 같은 답변의 판정이 Claude와 같을 때만 쓴다. 범위상 선택 항목이다.
-- 프롬프트: question-v0.7, grade-v0.5, repay-v0.5, extract-v0.3. 채점 검증 결정(구체적·단일 주장 포인트, 목적만 말한 답 미충족, 응용 재확인)과 "지시문에 시연과 겹치는 예시를 두지 않는다"(T0-6)를 반영했다.
+- 프롬프트: question-v0.8, grade-v0.5, repay-v0.6, extract-v0.3(11/11: question 규칙 우선순위, repay 결정 0~3개). 채점 검증 결정(구체적·단일 주장 포인트, 목적만 말한 답 미충족, 응용 재확인)과 "지시문에 시연과 겹치는 예시를 두지 않는다"(T0-6)를 반영했다.
 - 시연: 장면 4는 타임아웃 질문. 저장은 SQLite. 점수는 본인만 본다. 커버리지는 0%에서 시작한다.
 - 기획서는 11/11에 교차검증(직접 + Codex)을 거쳐 고쳤다. 기능과 범위는 바뀌지 않았다. 발표에서 조심할 표현은 [slides-draft.md](slides-draft.md) 0장.
 
@@ -169,14 +169,14 @@ S2가 45분 이상 늦으면 C1을 기다리지 않고 테스트 변경 감지�
 pyproject.toml을 만들어 줘. 패키지 xhuman, 콘솔 스크립트 xh = xhuman.cli:main,
 requires-python >= 3.11, 런타임 의존성 없음, dev 추가 의존성 pytest.
 CLAUDE.md의 디렉터리 구조대로 빈 모듈을 만들어 줘. 기존 코드는 없으니 모두 새로 쓴다.
-xhuman/llm/base.py에 contracts.md 2.1의 인터페이스, 캐시, 리플레이 모드를,
+xhuman/llm/base.py에 contracts.md 2.1의 인터페이스, 캐시(별도 파일 llm_cache.db, 키에 backend 포함), 리플레이 모드를,
 xhuman/llm/fake.py에 FakeBackend를 만들어 줘. 테스트는 XHUMAN_HOME을 임시 폴더로 쓴다.
 docs/prompts/*.md를 xhuman/prompts/로 그대로 복사하고, 각 파일의 "지시문" 코드 블록 안만 꺼내
-prompt로 돌려주는 로더를 만들어 줘(입력 형식·출력 예는 붙이지 않는다). test-cases.md T0-2~T0-4, T0-6을 먼저 테스트로 쓴다.
+prompt로 돌려주는 로더를 만들어 줘(입력 형식·출력 예는 붙이지 않는다). test-cases.md T0-2~T0-4, T0-6~T0-7을 먼저 테스트로 쓴다.
 .gitignore에 .venv, .pytest_cache, *.db를 추가해 줘.
 ```
 
-완료: `pip install -e .[dev] && pytest -q` 녹색(T0-2~T0-4, T0-6 포함).
+완료: `pip install -e .[dev] && pytest -q` 녹색(T0-2~T0-4, T0-6~T0-7 포함). 캐시는 `store.py`(S1)에 기대지 않고 `base.py`가 `llm_cache.db`를 직접 연다.
 
 ### S1 수집·색인·출처·위험 (2.5시간)
 
@@ -196,7 +196,9 @@ test-cases.md의 S1 시나리오를 먼저 테스트로 쓰고 통과시켜 줘.
 ### S2 결정·테스트 변경·why (2시간 15분)
 
 ```
-decisions를 DB에 연결해 줘: extract(LLM) → verify → classify → link → store_decisions.
+먼저(20분) xhuman/llm/claude_cli.py: verified-facts.md 2장의 명령으로 ClaudeCLIBackend를 만들고,
+`claude -p`에 짧은 입력 하나를 실제로 보내 스키마 응답을 받는 것까지 확인해 줘(Windows .cmd 래퍼면 verified-facts.md의 대응).
+그다음 decisions를 DB에 연결해 줘: extract(LLM) → verify → classify → link → store_decisions.
 extract 입력·verify·classify·link는 contracts.md 5.2~5.6 규칙으로 새로 작성한다.
 classify는 설계서 5.8 표 순서대로, 보류(deferred) 판정을 가장 먼저 한다.
 link는 related_symbols 일치를 먼저, 없으면 편집 hunk 줄 범위가 겹치는 단위에 연결(설계서 5.9).
@@ -208,13 +210,13 @@ xh why <파일::함수>를 contracts.md 4장 형식으로 출력.
 FakeBackend 응답은 contracts.md 2.3 형식으로 tests/fixtures/llm/<task>/default.json을 손으로 작성한다(사전 응답은 반입하지 않음).
 ```
 
-완료: 주체 분포가 기준표를 충족. `xh why payment/retry.py::charge_with_retry`가 주체 배지와 ✓ 인용 출력. 보류 후 반영 1건 이상(사용자 보류 발화 인용 포함). 테스트 변경 1건.
+완료: `claude_cli.py`로 실제 호출 1회 성공(첫 실제 호출. 결과는 캐시에 남는다). 주체 분포가 기준표를 충족. `xh why payment/retry.py::charge_with_retry`가 주체 배지와 ✓ 인용 출력. 보류 후 반영 1건 이상(사용자 보류 발화 인용 포함). 테스트 변경 6건(contracts.md 3장 test_watch).
 
 ### S3 질문·채점·상환·커버리지 (2.5시간)
 
 ```
 quiz: 설계서 6.1 우선순위로 대상 선정(테스트 변경 질문은 한 번에 1개까지: contracts.md 1.2 규칙 7), ingest 끝에 상위 6개 단위 질문을 미리 생성(pregenerate).
-xh check: 3개 질문 → 답 입력(--answers 파일 지원) → grade 한 번 호출 → 판정 저장(판정은 matched만으로 계산, 누락·중복 포인트는 미충족: contracts.md 1.2 규칙 1)
+xh check: 3개 질문(질문 앞에 [question_id] 출력, ID는 contracts.md 1.1 규칙으로 결정적) → 답 입력(--answers 파일이면 contracts.md 4장 표대로 건너뛰기·상환 자동 진행) → grade 한 번 호출 → 판정 저장(판정은 matched만으로 계산, 누락·중복 포인트는 미충족: contracts.md 1.2 규칙 1)
 → partial/unknown이면 repay → 재확인 → contracts.md 1.2 규칙 2로 판정 → 점수 전후 출력.
 coverage: 1.2 규칙 5~6. xh status: 커버리지 두 줄 + 이해 부채 상위 5개 + 열린 테스트 변경.
 test-cases.md의 S3 시나리오를 먼저 테스트로 쓰고 FakeBackend로 통과시켜 줘.
@@ -225,7 +227,7 @@ test-cases.md의 S3 시나리오를 먼저 테스트로 쓰고 FakeBackend로 �
 ### C1 통합 체크포인트 (30분)
 
 ```
-XHUMAN_BACKEND=claude로 시연 세션 전 과정을 실제로 돌려 줘. 호출별 소요 시간을 기록하고,
+XHUMAN_BACKEND=claude로 시연 세션 전 과정을 실제로 돌려 줘. 호출별 소요 시간과 실제 호출 횟수(캐시 적중 제외)를 기록하고,
 스키마 위반이나 인용 검증 실패가 있으면 목록으로 보여 줘. 코드는 고치지 말고 결과만 보고해 줘.
 ```
 
@@ -263,10 +265,13 @@ report-wireframe.md 1~4장의 2단 레이아웃: 왼쪽 지도 클릭 시 오른
 ```
 XHUMAN_REPLAY=1에서 demo-script.md의 명령을 순서대로 실행해 줘. 캐시 누락이나
 대본과 다른 숫자가 나오면 목록으로 보여 줘. 그다음 시연 시작 상태를 만드는
-scripts/demo_reset.sh(DB 삭제 → ingest)를 만들어 줘. 사전 측정 답변은 넣지 않는다(커버리지 0%에서 시작).
+scripts/demo_reset.sh를 만들어 줘: ① git checkout -- tests/fixtures/demo-payment(장면 5에서 고친 줄 복구)
+② $XHUMAN_HOME/xhuman.db만 삭제(llm_cache.db는 절대 지우지 않는다)
+③ XHUMAN_REPLAY=1로 xh ingest(추출·질문 생성을 실제로 다시 부르지 않고 캐시에서 읽는다. 캐시 누락이면 실패해야 정상).
+사전 측정 답변은 넣지 않는다(커버리지 0%에서 시작).
 ```
 
-완료: `demo_reset.sh` 후 대본 그대로 2회 통과, 네트워크 끊고도 통과.
+완료: `demo_reset.sh` 후 대본 그대로 2회 통과(두 번째는 첫 번째 시연의 만료·측정 기록이 남은 상태에서 다시 초기화), 네트워크 끊고도 통과.
 
 ### S6 리허설·캡처 (목 20:30 이후, 코드 변경 금지. 금요일 복구 창 전까지)
 

@@ -5,6 +5,7 @@
 ## 1. 저장소
 
 - 경로: `$XHUMAN_HOME/xhuman.db` (기본 `~/.xhuman/xhuman.db`), 파일 권한 600
+- **LLM 캐시는 별도 파일** `$XHUMAN_HOME/llm_cache.db`(11/11 변경). 측정 DB(`xhuman.db`)를 지우고 다시 ingest해도 리플레이 캐시가 남아야 시연 초기화가 된다. 캐시 파일은 `xhuman.llm.base`만 열고 닫는다(S0에서 `store.py` 없이 만들 수 있게)
 - SQLite, 외래 키 켬. 스키마 버전은 `PRAGMA user_version = 1`
 
 ### 1.1 테이블 (설계서 4장 대비 변경점만 표시)
@@ -19,16 +20,16 @@
 | `decisions` | 설계서와 동일 + **`decided_by_note`**, `decided_by`에 **`deferred`** 추가 | 분류 근거 문구 저장(리포트 표시용). `deferred` = 사용자가 미뤘는데 코드에 반영된 결정(설계서 5.8 첫 행) |
 | `decision_evidence` | 설계서와 동일 + **`verified`**(0/1) | 검증 실패 인용도 남겨 low confidence 표시 |
 | `decision_units` | 동일 | |
-| `test_events` | 동일. `kind`는 `assertion_changed`만 기록 | |
-| `questions` | 동일 + **`missed_from`**(재확인 질문이면 원 질문 ID) | |
+| `test_events` | 동일. `kind`는 `assertion_changed`만 기록 | 이벤트 단위와 `unit_id`는 3장 `test_watch` 규칙(11/11) |
+| `questions` | 동일 + **`missed_from`**(재확인 질문이면 원 질문 ID) + **`unit_hash`**(생성 시점 `content_hash`) | **`question_id`는 결정적으로 만든다(11/11):** `q_` + `sha256(unit_id, qtype, unit_hash, test_event_id 또는 빈 문자열)` 앞 12자리. 재확인 질문은 `<원 질문 ID>-r`. 같은 입력이면 초기화 뒤에도 ID가 같아 채점 캐시와 `--answers` 키가 맞는다. 단위 해시가 바뀌면 ID가 달라지므로 옛 질문은 다시 쓰지 않는다(`pick_targets`는 `unit_hash`가 현재 해시와 같은 질문만 쓰고, 없으면 새로 생성) |
 | `understanding` | 동일 | |
-| `llm_cache` | 동일 | |
+| `llm_cache` | 동일. 단 `xhuman.db`가 아니라 `llm_cache.db`에 둔다 | 위 경로 참고 |
 
 ### 1.2 이해 상태 규칙 (설계서 6.3·6.4·6.6의 모호한 부분 확정)
 
 1. 질문 하나의 판정: 핵심 포인트 전부 충족 → `understood`, 1개 이상 → `partial`, 0개 → `unknown`.
    **판정은 `matched`만으로 계산하고 `missed`를 믿지 않는다(11/10 추가).** 포인트 수 N에 대해 충족 = `matched` ∩ {0..N-1} − `missed`. `matched`·`missed` 어디에도 없는 번호는 미충족, 양쪽에 다 있는 번호도 미충족, 범위 밖 번호는 버린다. 누락·중복·범위 밖이 있으면 경고를 로그에 남긴다. "`missed`가 비었으면 understood"로 짜면 모델이 포인트 하나를 빠뜨렸을 때 틀린 답이 통과한다(K-EXAONE 동시 3회 중 2회 발생, 엔진과 무관한 채점 코드 결함).
-2. **상환 후 재확인**: 재확인 질문의 핵심 포인트는 원 질문에서 놓친 포인트만으로 만든다. 재확인에서 그 포인트를 모두 충족하면, 원 질문에서 이미 맞힌 포인트와 합쳐 **원 질문 기준 `understood`**로 본다. 새 `understanding` 레코드(`mode = repay_recheck`, `question_id` = 원 질문 ID)를 추가한다.
+2. **상환 후 재확인**: 재확인 질문의 핵심 포인트는 원 질문에서 놓친 포인트만으로 만든다(그래서 1~4개. 일반 질문의 2~4개 제한을 재확인 질문에는 적용하지 않는다, 11/11). 재확인에서 그 포인트를 모두 충족하면, 원 질문에서 이미 맞힌 포인트와 합쳐 **원 질문 기준 `understood`**로 본다. 새 `understanding` 레코드(`mode = repay_recheck`, `question_id` = 원 질문 ID)를 추가한다.
 3. 단위의 이해 상태 = 그 단위의 `valid` 기록 중 **가장 최근 것**의 `verdict`. 기록이 없으면 `unmeasured`.
 4. 단위 해시가 바뀌면 그 단위의 모든 기록을 `expired`로 바꾸고 상태는 `expired`.
 5. 커버리지 대상: AI 작성 비율 ≥ 0.3인 `active` 단위 중 **테스트 파일이 아닌 것**(11/10 추가). 시연 세션은 단위 51개 중 42개가 테스트 코드라, 테스트를 넣으면 커버리지가 테스트 이해도로 채워진다. 테스트 변경 질문은 그대로 묻지만 커버리지에는 넣지 않는다.
@@ -52,7 +53,7 @@
 
 공통 동작(`base.py`가 구현체 앞에서 처리):
 
-- 캐시 키 = `sha256(task, prompt_ver, model, prompt, stdin_text)`. 캐시가 있으면 호출하지 않는다.
+- 캐시 키 = `sha256(backend, task, prompt_ver, model, prompt, stdin_text)`. 캐시가 있으면 호출하지 않는다. `backend`(`claude`/`fake`/`openai`)를 넣는 이유: 가짜 응답이 실제 실행(C1)이나 리플레이에 섞이지 않게 한다(11/11). 리플레이 모드는 `backend = claude` 캐시만 읽는다(`XHUMAN_BACKEND`로 바꾸지 않았으면).
 - 응답이 스키마의 `required`를 만족하지 않으면 1회 재시도, 그래도 실패하면 `LLMError`.
 - **리플레이 모드**: `XHUMAN_REPLAY=1`이면 캐시만 쓴다. 캐시가 없으면 호출하지 않고 `LLMError("리플레이 캐시 없음: task=..., key=...")`로 즉시 실패한다. 조용히 다른 응답을 지어내지 않는다.
 
@@ -86,7 +87,7 @@
 |---|---|
 | `question` | 문자열 |
 | `qtype` | `how` / `why` / `test` |
-| `key_points[]` | 문자열 2~4개, 서로 겹치지 않음 |
+| `key_points[]` | 문자열 2~4개, 서로 겹치지 않음(재확인 질문은 repay의 `recheck_key_points`를 그대로 저장하므로 1~4개) |
 
 **grade** (답변 3개를 한 번에)
 
@@ -102,7 +103,7 @@
 | 필드 | 형식 |
 |---|---|
 | `flow` | 동작 흐름 한 문장 |
-| `decisions[]` | `{text, quote}` 2~3개. `quote`는 저장된 근거 인용 중 하나를 그대로 |
+| `decisions[]` | `{text, quote}` 0~3개(11/11: 결정 기록이 없는 함수면 빈 배열). `quote`는 저장된 근거 인용 중 하나를 그대로. JSON 스키마에 `minItems`를 두지 않는다 |
 | `alternative` | 버린 대안 한 문장(없으면 빈 문자열) |
 | `recheck_question` | 놓친 포인트를 다르게 묻는 질문 |
 | `recheck_key_points[]` | 놓친 포인트와 1:1 |
@@ -113,11 +114,11 @@
 |---|---|---|
 | `ingest` | `parse_session(path, project_root)` | JSONL 경로 → `Item` 목록(발화·편집, 순서 유지, 비밀값 가림) |
 | | `store_session(db, items, meta)` | DB에 `sessions`, `messages`, `edits` 저장 |
-| `codeindex` | `index_project(root)` | Git 추적 `.py` → 단위 목록(`unit_id`, 줄 범위, `content_hash`) |
+| `codeindex` | `index_project(root)` | Git 추적 `.py` → 단위 목록(`unit_id`, 줄 범위, `content_hash`). 단위는 모듈 수준 함수·클래스와 클래스의 메서드다. **함수 안의 중첩 함수·클래스는 단위로 세지 않는다**(11/11. 시연 샘플은 그래서 51개, 테스트 42개. 중첩까지 세면 52개) |
 | | `unit_hash(node)` | AST 노드 → 해시. 클래스는 메서드 본문 제외 골격 |
 | `provenance` | `classify_lines(file_text, ai_added_lines)` | 줄별 `ai` / `human` (공백 무시 완전 일치, 빈 줄·닫는 괄호 제외) |
-| `risk` | `tag_unit(unit_node, file_path)` | → `(risk_level, risk_tags)`. 태그는 `payment`, `db_write`, `auth`만. **테스트 파일 단위에는 태그를 붙이지 않는다**(테스트 함수 이름의 `payment` 때문에 높음이 되는 것을 막음). 이름 규칙(`payment`, `auth`)은 함수·메서드 이름에만 적용하고 클래스 이름에는 적용하지 않는다(11/10) |
-| `test_watch` | `detect(edits)` | 원래 있던 테스트 파일의 `Edit` → `assertion_changed` 이벤트 목록. "원래 있던"은 그 편집 직전에 파일이 있었다는 뜻이다(`Edit`이면 해당, `Write`의 `type: create`는 제외). 같은 세션 앞부분에서 `Write`로 만든 테스트 파일이라도 뒤의 `Edit`은 감지한다(11/10 명확화. 시연 세션이 이 경우) |
+| `risk` | `tag_unit(unit_node, file_path)` | → `(risk_level, risk_tags)`. 태그는 `payment`, `db_write`, `auth`만. `db_write`의 SQL 검사는 `execute`/`executemany` 첫 인자가 문자열 리터럴이거나, **같은 파일 모듈 수준에서 문자열 상수로 대입된 이름**이면 그 값을 본다(11/11: 시연 `record_payment`가 `_INSERT_PAYMENT` 상수와 `with conn:`을 씀). **테스트 파일 단위에는 태그를 붙이지 않는다**(테스트 함수 이름의 `payment` 때문에 높음이 되는 것을 막음). 이름 규칙(`payment`, `auth`)은 함수·메서드 이름에만 적용하고 클래스 이름에는 적용하지 않는다(11/10) |
+| `test_watch` | `detect(edits)` | 원래 있던 테스트 파일의 `Edit` → `assertion_changed` 이벤트 목록. **이벤트 단위(11/11): 조건을 충족한 `Edit` 하나에 이벤트 하나.** `before_text`/`after_text`는 그 편집에서 지워진·추가된 assert 줄 전부. `unit_id`: 편집 직후 파일(`original_file`의 `old_string`을 `new_string`으로 한 번 바꾼 것)을 `ast`로 파싱해 **처음 추가된 assert 줄을 감싸는 함수의 이름**을 구하고(이름이 바뀌었으면 바뀐 뒤 이름), 그 이름으로 최종 색인에서 찾은 단위. 최종 코드에 그 함수가 없으면 이벤트를 버린다. 11/11 녹화본에 적용하면 이벤트 6개이고, 단위는 시각순으로 `test_gives_up_after_exactly_two_attempts_on_transient_failure`(함수 4개를 한꺼번에 바꾼 첫 편집), `test_backs_off_exponentially_between_attempts`, `test_backoff_is_drawn_from_zero_to_the_exponential_cap`, `test_skips_remaining_attempts_when_next_one_would_exceed_deadline`, `test_unknown_outcome_carries_last_error_for_reconciliation`, `test_raises_payment_declined_without_retry_on_any_4xx`다. 모두 최종 코드에 있다. "원래 있던"은 그 편집 직전에 파일이 있었다는 뜻이다(`Edit`이면 해당, `Write`의 `type: create`는 제외). 같은 세션 앞부분에서 `Write`로 만든 테스트 파일이라도 뒤의 `Edit`은 감지한다(11/10 명확화. 시연 세션이 이 경우) |
 | `decisions` | `extract(items, backend)` → `verify(...)` → `classify(...)` → `link(...)` | 5장 규칙대로 새로 작성(프로토타입은 반입 불가). DB 저장은 `store_decisions` |
 | `quiz` | `pick_targets(db, n=3)` | 설계서 6.1 우선순위. 열린 테스트 이벤트가 맨 앞, 같은 단위 2개 금지 |
 | | `pregenerate(db, backend)` | ingest 직후 상위 대상 질문을 미리 생성해 저장 |
@@ -125,20 +126,29 @@
 | `repay` | `explain(db, backend, record)` → `recheck(...)` | 1.2의 규칙 2 적용 |
 | `coverage` | `compute(db, project)` | → `{simple, weighted, by_unit[]}` |
 | `report` | `render(db, project, out_dir)` | 정적 HTML 1장 |
-| `cli` | `main(argv)` | 7장 명령 |
+| `cli` | `main(argv)` | 이 문서 4장 명령 |
 
 ## 4. CLI 입출력
 
 | 명령 | 출력 예 |
 |---|---|
-| `xh ingest --session P --project R` | `발화 8+11, 편집 14 → 결정 12 (제외 0, 확신 낮음 1), 테스트 변경 1, 질문 6개 미리 생성` |
+| `xh ingest --session P --project R` | `발화 8+11, 편집 14 → 결정 12 (제외 0, 확신 낮음 1), 테스트 변경 6, 질문 6개 미리 생성`(숫자는 형식 예시. 테스트 변경 6은 11/11 녹화본 기준) |
 | `xh status` | 커버리지 두 줄 + 이해 부채 상위 5개 표 + 열린 테스트 변경 + 아직 확인하지 않은 보류 후 반영 결정 수 |
-| `xh check [--answers FILE]` | 질문 3개 → 답 입력(또는 파일) → 질문별 판정·피드백 → "상환할까요? [Y/n]" → 설명 → 재확인 → 점수 전후 → 마지막 줄 `이번에 확인하지 않은 결정: 보류 후 반영 a · AI 단독 b · 포괄 수락 c (위험 함수 n개)`. 다 확인하지 않았다는 사실을 숨기지 않기 위한 줄이며 프로그램이 계산한다 |
+| `xh check [--answers FILE]` | 질문 3개 → 답 입력(또는 파일) → 질문별 판정·피드백 → "상환할까요? [Y/n]" → 설명 → 재확인 → 점수 전후 → 마지막 줄 `이번에 질문하지 않은 함수의 결정: 보류 후 반영 a · AI 단독 b · 포괄 수락 c (위험 함수 n개)`. 다 확인하지 않았다는 사실을 숨기지 않기 위한 줄이며 프로그램이 계산한다. 질문한 함수에 연결된 결정은 모두 세지 않는다(질문이 그중 어느 결정을 물었는지는 기록하지 않으므로). 이름도 그 범위대로 쓴다(11/11) |
 | `xh why <파일::함수>` | 결정별: 요약 / 주체 배지 / 이유 / 버린 대안 / 근거 인용(✓ 원문 일치) |
 | `xh report` | `~/.xhuman/report/index.html` 생성 후 경로 출력(가능하면 브라우저 열기) |
 | `xh scan --project R` | 해시를 다시 계산해 `만료 N개`를 출력(11/11 추가. 만료 기능에 필요한데 표에 빠져 있었다) |
 
-`--answers FILE`은 `{"<question_id>": "답변", ...}` JSON. 시연에서 답변을 고정해 채점·상환 결과를 캐시와 일치시키는 용도다.
+`--answers FILE`은 `{"<question_id>": "답변", "<question_id>-r": "재확인 답변", ...}` JSON. 시연에서 답변을 고정해 채점·상환 결과를 캐시와 일치시키는 용도다. 파일이 있으면 입력을 하나도 묻지 않고 아래 규칙으로 끝까지 간다(11/11):
+
+| 상황 | 동작 |
+|---|---|
+| 질문 ID가 파일에 없음 | 그 질문은 건너뜀(채점·기록 없음). 출력에 `건너뜀` 표시 |
+| `partial`/`unknown`이고 `<question_id>-r`이 파일에 있음 | 상환 Y로 보고 설명 → 재확인 질문 출력 → 그 답으로 재확인 채점 |
+| `partial`/`unknown`이고 `<question_id>-r`이 없음 | 상환하지 않음(`상환 생략` 표시). 판정은 그대로 기록 |
+| 키 이름이 질문 ID가 아님(`_comment` 등) | 무시 |
+
+시연은 Q2(타임아웃)만 재확인 답을 넣는다. Q1(테스트 변경)·Q3은 재확인 키를 넣지 않아 상환하지 않는다. `_comment` 외의 별칭 키(`q_timeout` 등)는 쓰지 않는다. 실제 ID는 `xh check`가 질문 앞에 `[q_xxxxxxxxxxxx]`로 함께 출력하므로 리허설 한 번 뒤 거기서 복사한다(ID가 결정적이라 초기화해도 같다).
 
 ## 5. 처음부터 다시 만들 때의 세부 규칙
 

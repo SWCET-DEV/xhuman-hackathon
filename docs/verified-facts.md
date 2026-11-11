@@ -83,7 +83,7 @@ claude -p "<지시문>" --model <sonnet|haiku> --tools "" --no-session-persisten
 
 | 함정 | 내용 |
 |---|---|
-| 픽스처 테스트 실패 | `fixtures/demo-payment`에서 `PYTHONPATH=. pytest` 결과 20 통과 / 1 실패(`test_deadline_stops_retrying`). 가짜 시계 순서가 실제 `monotonic` 호출 순서와 맞지 않음. `PYTHONPATH` 없이는 수집조차 안 됨 |
+| 픽스처 테스트 실패(옛 픽스처, 11/10 녹화 전) | **지금 저장소의 녹화본과 다른 이전 샘플 기록이다. 현재 `tests/fixtures/demo-payment`는 43 통과(`python -m pytest -q`).** 이전 샘플에서는 `PYTHONPATH=. pytest` 결과 20 통과 / 1 실패(`test_deadline_stops_retrying`). 가짜 시계 순서가 실제 `monotonic` 호출 순서와 맞지 않음. `PYTHONPATH` 없이는 수집조차 안 됨 |
 | 녹화 환경(11/10) | Windows, 명령 프롬프트(cmd), Claude Code **2.1.322**(녹화 직전 2.1.308에서 업데이트), pytest 9.2.0. 형식 확인은 2.1.311 기준이라 녹화본으로 레코드 형식을 다시 확인한다. 녹화가 끝날 때까지 업데이트 금지. 목요일 버전이 더 높아도 무방(당일은 녹화본을 읽기만 함, `claude -p` 옵션만 확인). 대화 기록 경로에 사번이 든 Windows 홈 경로가 남으므로 정리 단계에서 치환 |
 | Windows의 `claude` 실행 파일(11/11, 미확인) | 지금까지 `claude -p --json-schema` 검증은 Linux에서만 했다. Windows에서 `claude`가 `.cmd` 래퍼이면 `subprocess`로 JSON 스키마를 인자로 넘길 때 따옴표가 깨질 수 있다. 수요일 점검에서 실행 파일 종류와 스키마 호출 성공 여부를 확인한다. 깨지면 `claude_cli.py`에서 래퍼 대신 실제 실행 파일을 찾아 부르거나, 스키마 없이 호출하고 `result`를 JSON으로 파싱하는 경로를 쓴다 |
 | 사내망 HTTPS(11/10) | 녹화 PC(Windows, Python 3.15)에서 Python `urllib`로 외부 API(K-EXAONE)를 부르면 `CERTIFICATE_VERIFY_FAILED: Basic Constraints of CA cert not marked critical`. 사내 프록시가 내미는 CA 인증서가 Python 3.13+의 엄격 검사에 걸리는 것으로 보인다. 해커톤 PC는 대외망이라(11/10 발표자 확인) 이 문제는 녹화 PC 환경에 한정될 가능성이 높다. 수요일 점검에서 해커톤 PC로 확인한다. `claude` CLI는 이 영향을 받지 않았다. 검증을 약하게 하는 우회는 보안 판단이 필요하므로 기본으로 넣지 않는다 |
